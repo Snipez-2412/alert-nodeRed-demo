@@ -1,19 +1,15 @@
 package com.example.demo.controller;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.io.IOException;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api")
@@ -24,15 +20,16 @@ public class AlertController {
     @Value("${nodeRed.alert.url}")
     private String alertUrl;
 
-    @PostMapping("/trigger-alert")
-    public ResponseEntity<Map<String, Object>> triggerAlert(@RequestBody Map<String, Object> payload) {
-        String message = (String) payload.get("message");
-        String timestampStr = (String) payload.get("timestamp");
-        String cameraName = (String) payload.get("cameraName");
-        String area = (String) payload.get("area");
-        String temperature = (String) payload.get("temperature");
-
-        // Manually parse the timestamp
+    @PostMapping(value = "/trigger-alert", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> triggerAlert(
+            @RequestPart("message") String message,
+            @RequestPart("timestamp") String timestampStr,
+            @RequestPart("cameraName") String cameraName,
+            @RequestPart("area") String area,
+            @RequestPart("temperature") String temperature,
+            @RequestPart(value = "image", required = false) MultipartFile file
+    ) {
+        // Parse timestamp
         Instant timestamp;
         try {
             LocalDateTime localDateTime = LocalDateTime.parse(timestampStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
@@ -48,6 +45,25 @@ public class AlertController {
         processedPayload.put("area", area);
         processedPayload.put("temperature", temperature);
 
+        if (file != null && !file.isEmpty()) {
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Only image files are allowed."));
+            }
+
+            try {
+                byte[] fileBytes = file.getBytes();
+                String base64File = Base64.getEncoder().encodeToString(fileBytes);
+
+                processedPayload.put("filename", file.getOriginalFilename());
+                processedPayload.put("filetype", file.getContentType());
+                processedPayload.put("filedata", base64File);
+            } catch (IOException e) {
+                return ResponseEntity.internalServerError().body(Map.of("error", "Failed to read uploaded image file."));
+            }
+        }
+
+        // Send to Node-RED
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(processedPayload, headers);
