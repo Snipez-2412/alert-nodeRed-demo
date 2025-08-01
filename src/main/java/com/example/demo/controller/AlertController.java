@@ -18,7 +18,7 @@ public class AlertController {
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${nodeRed.alert.url}")
-    private String alertUrl;
+    private String nodeRedUrl;
 
     @PostMapping(value = "/trigger-alert", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> triggerAlert(
@@ -68,7 +68,7 @@ public class AlertController {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(processedPayload, headers);
 
-        restTemplate.postForEntity(alertUrl + "/receive-alert", request, String.class);
+        restTemplate.postForEntity(nodeRedUrl+"/receive-alert", request, String.class);
 
         return ResponseEntity.ok(processedPayload);
     }
