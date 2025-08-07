@@ -1,5 +1,8 @@
 package com.example.demo.controller;
 
+import com.example.demo.entity.AlertEntity;
+import com.example.demo.service.AlertService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +19,9 @@ import java.util.*;
 public class AlertController {
 
     private final RestTemplate restTemplate = new RestTemplate();
+
+    @Autowired
+    private AlertService alertService;
 
     @Value("${nodeRed.alert.url}")
     private String nodeRedUrl;
@@ -38,12 +44,16 @@ public class AlertController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid timestamp format. Use yyyy-MM-dd HH:mm:ss"));
         }
 
-        Map<String, Object> processedPayload = new HashMap<>();
-        processedPayload.put("message", message);
-        processedPayload.put("timestamp", timestamp.toString());
-        processedPayload.put("cameraName", cameraName);
-        processedPayload.put("area", area);
-        processedPayload.put("temperature", temperature);
+        // Generate eventId
+        String eventId = alertService.generateEventId();
+
+        AlertEntity alert = new AlertEntity();
+        alert.setEventId(eventId);
+        alert.setMessage(message);
+        alert.setTimestamp(timestamp.toString());
+        alert.setCameraName(cameraName);
+        alert.setArea(area);
+        alert.setTemperature(temperature);
 
         if (file != null && !file.isEmpty()) {
             String contentType = file.getContentType();
@@ -55,22 +65,36 @@ public class AlertController {
                 byte[] fileBytes = file.getBytes();
                 String base64File = Base64.getEncoder().encodeToString(fileBytes);
 
-                processedPayload.put("filename", file.getOriginalFilename());
-                processedPayload.put("filetype", file.getContentType());
-                processedPayload.put("filedata", base64File);
+                alert.setFilename(file.getOriginalFilename());
+                alert.setFiletype(contentType);
+                alert.setFiledata(base64File);
+
             } catch (IOException e) {
                 return ResponseEntity.internalServerError().body(Map.of("error", "Failed to read uploaded image file."));
             }
         }
 
+        alertService.saveAlert(alert);
+
         // Send to Node-RED
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(processedPayload, headers);
+        HttpEntity<AlertEntity> request = new HttpEntity<>(alert, headers);
+        restTemplate.postForEntity(nodeRedUrl + "/receive-alert", request, String.class);
 
-        restTemplate.postForEntity(nodeRedUrl+"/receive-alert", request, String.class);
+        Map<String, Object> responseMap = new HashMap<>();
+        responseMap.put("eventId", eventId);
+        responseMap.put("message", message);
+        responseMap.put("timestamp", timestamp.toString());
+        responseMap.put("cameraName", cameraName);
+        responseMap.put("area", area);
+        responseMap.put("temperature", temperature);
 
-        return ResponseEntity.ok(processedPayload);
+        if (file != null && !file.isEmpty()) {
+            responseMap.put("filename", file.getOriginalFilename());
+            responseMap.put("filetype", file.getContentType());
+        }
+
+        return ResponseEntity.ok(responseMap);
     }
-
 }

@@ -11,11 +11,13 @@ public class ReceiveAlert {
 
     @PostMapping("/stage1")
     public ResponseEntity<String> receiveStage1Alert(@RequestBody Map<String, Object> payload) {
+        String eventId = (String) payload.getOrDefault("eventId", null);
         String message = (String) payload.getOrDefault("message", "No message provided");
         String timestamp = (String) payload.getOrDefault("timestamp", "unknown");
         String area = (String) payload.getOrDefault("area", "unknown");
 
         System.out.println("Stage 1 Alert Received:");
+        System.out.println("Event ID: " + eventId);
         System.out.println("Message: " + message);
         System.out.println("Timestamp: " + timestamp);
         System.out.println("Area: " + area);
