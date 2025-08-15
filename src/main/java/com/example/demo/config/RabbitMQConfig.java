@@ -15,9 +15,9 @@ public class RabbitMQConfig {
     public static final String ALERT_EXCHANGE = "alertExchange";
     public static final String ALERT_ROUTING_KEY = "alertRoutingKey";
 
-    public static final String ALERT_DLQ = "alertQueue.dlq";
-    public static final String ALERT_DLQ_EXCHANGE = "alertDlqExchange";
-    public static final String ALERT_DLQ_ROUTING_KEY = "alertDlqRoutingKey";
+//    public static final String ALERT_DLQ = "alertQueue.dlq";
+//    public static final String ALERT_DLQ_EXCHANGE = "alertDlqExchange";
+//    public static final String ALERT_DLQ_ROUTING_KEY = "alertDlqRoutingKey";
 
     /**
      * Main queue with DLQ binding for retry handling
@@ -28,13 +28,13 @@ public class RabbitMQConfig {
                 .build();
     }
 
-    /**
-     * Dead Letter Queue
-     */
-    @Bean
-    public Queue alertDeadLetterQueue() {
-        return QueueBuilder.durable(ALERT_DLQ).build();
-    }
+//    /**
+//     * Dead Letter Queue
+//     */
+//    @Bean
+//    public Queue alertDeadLetterQueue() {
+//        return QueueBuilder.durable(ALERT_DLQ).build();
+//    }
 
     /**
      * Main exchange
@@ -44,13 +44,13 @@ public class RabbitMQConfig {
         return new TopicExchange(ALERT_EXCHANGE);
     }
 
-    /**
-     * DLQ exchange
-     */
-    @Bean
-    public TopicExchange alertDlqExchange() {
-        return new TopicExchange(ALERT_DLQ_EXCHANGE);
-    }
+//    /**
+//     * DLQ exchange
+//     */
+//    @Bean
+//    public TopicExchange alertDlqExchange() {
+//        return new TopicExchange(ALERT_DLQ_EXCHANGE);
+//    }
 
     /**
      * Bind main queue to main exchange
@@ -62,15 +62,15 @@ public class RabbitMQConfig {
                 .with(ALERT_ROUTING_KEY);
     }
 
-    /**
-     * Bind DLQ to DLQ exchange
-     */
-    @Bean
-    public Binding alertDlqBinding() {
-        return BindingBuilder.bind(alertDeadLetterQueue())
-                .to(alertDlqExchange())
-                .with(ALERT_DLQ_ROUTING_KEY);
-    }
+//    /**
+//     * Bind DLQ to DLQ exchange
+//     */
+//    @Bean
+//    public Binding alertDlqBinding() {
+//        return BindingBuilder.bind(alertDeadLetterQueue())
+//                .to(alertDlqExchange())
+//                .with(ALERT_DLQ_ROUTING_KEY);
+//    }
 
     @Bean
     public Jackson2JsonMessageConverter jackson2JsonMessageConverter() {
